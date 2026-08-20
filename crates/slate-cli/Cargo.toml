@@ -1,0 +1,22 @@
+[package]
+name = "slate-cli"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+description = "CLI demo for the Slate inference clearinghouse."
+
+[[bin]]
+name = "slate"
+path = "src/main.rs"
+
+[dependencies]
+slate = { path = "../slate" }
+tokio = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+clap = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
