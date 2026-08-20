@@ -1,7 +1,6 @@
 use crate::provider::InferenceProvider;
 use crate::types::{Inference, SlateCorpus, Task};
 use std::sync::Arc;
-use tracing::{error, info, warn};
 
 /// Slate inference clearinghouse.
 ///
@@ -58,10 +57,6 @@ impl Slate {
                 .collect()
         };
 
-        if providers.is_empty() {
-            warn!("no providers selected for task {}", task.id);
-        }
-
         let mut corpus = SlateCorpus::new(task.clone());
         let mut handles = Vec::with_capacity(providers.len());
 
@@ -69,14 +64,9 @@ impl Slate {
             let task = task.clone();
             let handle = tokio::spawn(async move {
                 let name = provider.name().to_string();
-                info!(provider = %name, task_id = %task.id, "starting inference");
                 match provider.infer(&task).await {
-                    Ok(inference) => {
-                        info!(provider = %name, task_id = %task.id, latency_ms = inference.provenance.latency_ms, "inference complete");
-                        inference
-                    }
+                    Ok(inference) => inference,
                     Err(err) => {
-                        error!(provider = %name, task_id = %task.id, error = %err, "inference failed");
                         Inference {
                             id: ulid::Ulid::new().to_string(),
                             provenance: crate::types::Provenance {
@@ -101,13 +91,10 @@ impl Slate {
         }
 
         for handle in handles {
-            match handle.await {
-                Ok(inference) => corpus.push(inference),
-                Err(join_err) => {
-                    error!(error = %join_err, "provider task panicked");
-                    // Panicked tasks are logged but do not abort the corpus.
-                }
+            if let Ok(inference) = handle.await {
+                corpus.push(inference);
             }
+            // Panicked tasks are dropped so one failing upstream does not abort the corpus.
         }
 
         corpus

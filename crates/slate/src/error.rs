@@ -1,27 +1,58 @@
-use thiserror::Error;
+use std::fmt;
 
-#[derive(Debug, Error)]
+#[derive(Debug)]
 pub enum SlateError {
-    #[error("network request failed: {0}")]
-    Network(#[from] reqwest::Error),
-
-    #[error("serialization failed: {0}")]
-    Serialization(#[from] serde_json::Error),
-
-    #[error("provider '{provider}' failed: {message}")]
+    Network(reqwest::Error),
+    Serialization(serde_json::Error),
     Provider { provider: String, message: String },
-
-    #[error("provider '{0}' is not configured")]
     ProviderNotConfigured(String),
-
-    #[error("provider '{0}' returned an empty response")]
     EmptyResponse(String),
-
-    #[error("missing required environment variable: {0}")]
     MissingEnvVar(String),
-
-    #[error("invalid configuration: {0}")]
     Config(String),
+}
+
+impl fmt::Display for SlateError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            SlateError::Network(err) => write!(f, "network request failed: {err}"),
+            SlateError::Serialization(err) => write!(f, "serialization failed: {err}"),
+            SlateError::Provider { provider, message } => {
+                write!(f, "provider '{provider}' failed: {message}")
+            }
+            SlateError::ProviderNotConfigured(provider) => {
+                write!(f, "provider '{provider}' is not configured")
+            }
+            SlateError::EmptyResponse(provider) => {
+                write!(f, "provider '{provider}' returned an empty response")
+            }
+            SlateError::MissingEnvVar(var) => {
+                write!(f, "missing required environment variable: {var}")
+            }
+            SlateError::Config(message) => write!(f, "invalid configuration: {message}"),
+        }
+    }
+}
+
+impl std::error::Error for SlateError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            SlateError::Network(err) => Some(err),
+            SlateError::Serialization(err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
+impl From<reqwest::Error> for SlateError {
+    fn from(err: reqwest::Error) -> Self {
+        SlateError::Network(err)
+    }
+}
+
+impl From<serde_json::Error> for SlateError {
+    fn from(err: serde_json::Error) -> Self {
+        SlateError::Serialization(err)
+    }
 }
 
 impl SlateError {

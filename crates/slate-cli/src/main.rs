@@ -1,4 +1,3 @@
-use anyhow::{Context, Result};
 use clap::Parser;
 use slate::{GrokReasoner, SlateConfig, Task};
 use std::env;
@@ -28,15 +27,19 @@ struct Args {
     show_prompt: bool,
 }
 
-#[tokio::main]
-async fn main() -> Result<()> {
-    tracing_subscriber::fmt::init();
+fn main() {
+    if let Err(err) = tokio::runtime::Runtime::new().unwrap().block_on(run()) {
+        eprintln!("error: {err}");
+        std::process::exit(1);
+    }
+}
 
+async fn run() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let args = Args::parse();
     let prompt = args.prompt.join(" ");
 
     let config = SlateConfig::from_env()
-        .context("failed to load Slate configuration from environment")?;
+        .map_err(|e| format!("failed to load Slate configuration from environment: {e}"))?;
 
     if config.providers.is_empty() {
         eprintln!("No providers configured. Set at least one of:");
@@ -47,7 +50,7 @@ async fn main() -> Result<()> {
 
     let slate = config
         .build()
-        .context("failed to build Slate engine")?;
+        .map_err(|e| format!("failed to build Slate engine: {e}"))?;
 
     println!("Configured providers: {:?}", slate.provider_names());
 

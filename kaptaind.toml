@@ -27,6 +27,9 @@ branch = "main"
 [ratelimit]
 min_commit_interval = 10
 
+[trust]
+execution = "trusted"
+
 [test]
 command = "cargo test"
 required = true
