@@ -16,3 +16,8 @@
 *.swo
 .DS_Store
 *.log
+.lwoodz/
+.uni/
+.orb
+.traci/
+.azusa/
